@@ -10,7 +10,7 @@ TT = int(dyn.tf/dyn.dt)
 n_x = 3
 n_u = 2
 
-def LQR_trajectory(xx_opt, uu_opt):
+def LQR_trajectory(xx_opt, uu_opt, offset):
 
     AA = np.zeros((n_x,n_x,TT))
     BB = np.zeros((n_x,n_u,TT))
@@ -48,7 +48,6 @@ def LQR_trajectory(xx_opt, uu_opt):
     uu = np.zeros((n_u,TT))
 
     # set initial condition offset
-    offset = [0, 0, 0, 0.2, 0, 0]
     xx[:,0] = x0 + offset
 
     for tt in range(TT-1):

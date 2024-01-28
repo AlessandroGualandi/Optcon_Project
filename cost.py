@@ -9,8 +9,8 @@ n_u = 2
 
 #QQt = np.array([[10000, 0], [0, 100]])
 #QQt = 0.1*np.diag([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-QQt = 0.1*np.diag([10.0, 1.0, 1.0])
-RRt = 0.01*np.eye(n_u)
+QQt = 0.1*np.diag([1.0, 100.0, 100.0])
+RRt = 0.01*np.diag([1.0, 1.0])
 # RRt = 1*np.eye(ni)
 
 QQT = QQt

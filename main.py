@@ -44,8 +44,8 @@ print("Computing equilibria 1 [V1 = {}, R1 = {}]".format(VV1,RR1))
 ww_eq1 = equilibrium_finder.eq_finder(WW1, VV1, ww_eq1)
 
 
-RR2 = 18
-VV2 = 15
+RR2 = 16
+VV2 = 13
 #psi_dot = w = v/r
 WW2 = VV2/RR2
 
@@ -60,8 +60,11 @@ ww_eq2 = equilibrium_finder.eq_finder(WW2, VV2, ww_eq2)
 ##################################################################
 ### UNFEASIBLE TRAJECTORY BETWEEN EQUILIBRIA (STEP)
 
+smooth_reference = True
+
 xx_ref = np.zeros((n_x, TT))
 uu_ref = np.zeros((n_u, TT))
+
 
 # Define input reference (step function)
 for kk in range(int(TT/2)): uu_ref[:,kk] = [ww_eq1[1], ww_eq1[2]]
@@ -76,6 +79,7 @@ xx_ref[:,0] = xx_init
 for kk in range(int(TT/2)):
     xx_ref[:,kk+1] = dyn.dynamics(xx_ref[:,kk],uu_ref[:,kk])[0]
 
+# Define TT/2 state variables
 xx_init = [xx_ref[0,int(TT/2-1)], xx_ref[1,int(TT/2-1)], xx_ref[2,int(TT/2-1)], VV2, ww_eq2[0], WW2]
 xx_ref[:,int(TT/2)] = xx_init
 
@@ -83,27 +87,44 @@ xx_ref[:,int(TT/2)] = xx_init
 for kk in range(int(TT/2), TT-1):
     xx_ref[:,kk+1] = dyn.dynamics(xx_ref[:,kk],uu_ref[:,kk])[0]
 
-### UNFEASIBLE TRAJECTORY BETWEEN EQUILIBRIA (SMOOTH)
-V_transient = TT/10
-delta_V = VV2-VV1
-V_slope = delta_V/V_transient
+if smooth_reference:
+    ### UNFEASIBLE TRAJECTORY BETWEEN EQUILIBRIA (SMOOTH)
 
-beta_transient = TT/10
-delta_beta = ww_eq2[0]-ww_eq1[0]
-beta_slope = delta_beta/beta_transient
+    V_transient = TT/10
+    delta_V = VV2-VV1
+    V_slope = delta_V/V_transient
 
-psi_dot_transient = TT/10
-delta_psi_dot = WW2-WW1
-psi_dot_slope = delta_psi_dot/psi_dot_transient
+    beta_transient = TT/10
+    delta_beta = ww_eq2[0]-ww_eq1[0]
+    beta_slope = delta_beta/beta_transient
 
-for kk in range(int(TT/2-V_transient/2), int(TT/2+V_transient/2)):
-    xx_ref[3,kk] = VV1 + V_slope*(kk-(TT/2-V_transient/2))
+    psi_dot_transient = TT/10
+    delta_psi_dot = WW2-WW1
+    psi_dot_slope = delta_psi_dot/psi_dot_transient
 
-for kk in range(int(TT/2-beta_transient/2), int(TT/2+beta_transient/2)):
-    xx_ref[4,kk] = ww_eq1[0] + beta_slope*(kk-(TT/2-beta_transient/2))
+    delta_transient = TT/10
+    delta_delta = ww_eq2[1]-ww_eq1[1]
+    delta_slope = delta_delta/delta_transient
 
-for kk in range(int(TT/2-psi_dot_transient/2), int(TT/2+psi_dot_transient/2)):
-    xx_ref[5,kk] = WW1 + psi_dot_slope*(kk-(TT/2-psi_dot_transient/2))
+    Fx_transient = TT/10
+    delta_Fx =  ww_eq2[2]-ww_eq1[2]
+    Fx_slope = delta_Fx/Fx_transient
+
+    for kk in range(int(TT/2-V_transient/2), int(TT/2+V_transient/2)):
+        xx_ref[3,kk] = VV1 + V_slope*(kk-(TT/2-V_transient/2))
+
+    for kk in range(int(TT/2-beta_transient/2), int(TT/2+beta_transient/2)):
+        xx_ref[4,kk] = ww_eq1[0] + beta_slope*(kk-(TT/2-beta_transient/2))
+
+    for kk in range(int(TT/2-psi_dot_transient/2), int(TT/2+psi_dot_transient/2)):
+        xx_ref[5,kk] = WW1 + psi_dot_slope*(kk-(TT/2-psi_dot_transient/2))
+
+    for kk in range(int(TT/2-delta_transient/2), int(TT/2+delta_transient/2)):
+        uu_ref[0,kk] = ww_eq1[1] + delta_slope*(kk-(TT/2-delta_transient/2))
+
+    for kk in range(int(TT/2-Fx_transient/2), int(TT/2+Fx_transient/2)):
+        uu_ref[1,kk] = ww_eq1[2] + Fx_slope*(kk-(TT/2-Fx_transient/2))
+    
 
 
 steps = np.arange(TT-1)
@@ -139,21 +160,60 @@ print("#########################################################################
 print("###############################################################################################")
 print("### FEASIBLE TRAJECTORY BETWEEN EQUILIBRIA")
 
-# Now we have a set of states and input describing an unfeasible trajectory.
-# Basically the vehicle jump instantly (t = TT/2) from equilibri 1 to equilibria 2.
-# Let's find a feasible rtajectory between the two equilibria
-
 # Initial guess
 xx_init = np.zeros((n_x, TT))
 uu_init = np.zeros((n_u, TT))
-#xx_init[3,:] = 6
 
 xx_init[:,0] = [0, -RR1, -ww_eq1[0], VV1, ww_eq1[0], WW1]
 
+# Initial guess equal to the first equilibrium for all time steps
 for kk in range(int(TT-1)): uu_init[:,kk] = [ww_eq1[1], ww_eq1[2]]
-for kk in range(int(TT-1)):
-    xx_init[:,kk+1] = dyn.dynamics(xx_init[:,kk],uu_init[:,kk])[0]
+for kk in range(int(TT-1)): xx_init[:,kk+1] = xx_init[:,0]
 
+# Define a smooth initial guess
+# Does it work fine even if the inital guess is not a trajectory?? No
+
+# Compute a set of equilibrium between the inital and final equilibrium
+# Fix the evolution of V and psi_dot as linear from VV1,WW1 to VV2,WW2
+# Compute beta, delta and Fx such that each point is an equilibrium
+
+transient = TT/5
+delta_V = VV2-VV1
+V_slope = delta_V/transient
+
+delta_psi_dot = WW2-WW1
+psi_dot_slope = delta_psi_dot/transient
+
+quasi_static_xx = np.zeros((n_x, TT))
+quasi_static_uu = np.zeros((n_u, TT))
+
+for kk in range(0,int(TT/2-transient/2)):
+    quasi_static_xx[3,kk] = VV1
+    quasi_static_xx[4,kk] = ww_eq1[0]
+    quasi_static_xx[5,kk] = WW1
+
+    quasi_static_uu[0,kk] = ww_eq1[1]
+    quasi_static_uu[1,kk] = ww_eq1[2]
+
+for kk in range(int(TT/2-transient/2), int(TT/2+transient/2)):
+    quasi_static_xx[3,kk] = VV1 + V_slope*(kk-(TT/2-transient/2))
+    quasi_static_xx[5,kk] = WW1 + psi_dot_slope*(kk-(TT/2-transient/2))
+    ww_eq = [0.1, 0.05, 50]
+    ww_eq = equilibrium_finder.eq_finder(quasi_static_xx[5,kk], quasi_static_xx[3,kk], ww_eq)
+    quasi_static_xx[4,kk] = ww_eq[0]
+    quasi_static_uu[0,kk] = ww_eq[1]
+    quasi_static_uu[1,kk] = ww_eq[2]
+
+for kk in range(int(TT/2+transient/2), TT-1):
+    quasi_static_xx[3,kk] = VV2
+    quasi_static_xx[4,kk] = ww_eq2[0]
+    quasi_static_xx[5,kk] = WW2
+
+    quasi_static_uu[0,kk] = ww_eq2[1]
+    quasi_static_uu[1,kk] = ww_eq2[2]
+
+offset = [0, 0, 0, 0, 0, 0]
+xx_init, uu_init = LQR.LQR_trajectory(quasi_static_xx, quasi_static_uu, offset)
 
 #xx, uu = gom.optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init)
 xx_opt, uu_opt = nom.optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init)
@@ -215,7 +275,8 @@ plt.show()
 ##################################################################
 ### TRAJECTORY TRACKING VIA LQR (TASK 3)
 
-xx_LQR, uu_LQR = LQR.LQR_trajectory(xx_opt[:,:,-1], uu_opt[:,:,-1])
+offset = [0, 0, 0, 0.2, 0, 0]
+xx_LQR, uu_LQR = LQR.LQR_trajectory(xx_opt[:,:,-1], uu_opt[:,:,-1],offset)
 
 steps = np.arange(TT-1)
 plt.figure('Velocity')

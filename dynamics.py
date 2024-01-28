@@ -2,7 +2,7 @@ import numpy as np
 
 #dt = 0.001
 dt = 0.01
-tf = 20
+tf = 30
 n_x = 6
 n_u = 2
 
