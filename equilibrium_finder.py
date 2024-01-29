@@ -11,8 +11,6 @@ def eq_finder (WW, VV, ww_eq) :
     nIter = 1000
     stepsize = 0.02
 
-    print("Initial arbitrary ww_eq [beta, delta, Fx] = {}".format(ww_eq))
-    print("Running Newton's method for root finding ...")
     # Newton method for root finding
 
     for i in range(nIter):
@@ -38,8 +36,4 @@ def eq_finder (WW, VV, ww_eq) :
         '''
         ww_eq = ww_eq + stepsize*np.linalg.inv(grad_ww)@Delta_xx
         
-    print("Final ww_eq [beta, delta, Fx] = {}".format(ww_eq))
-    print("Check dynamics at t=0 ([0,0,0] ideal): {}".format(Delta_xx))
-
-
     return ww_eq

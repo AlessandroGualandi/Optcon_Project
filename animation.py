@@ -6,7 +6,7 @@ import numpy as np
 window = tk.Tk()
 window.title('Vehicle Animation')
 
-side_length = 1200
+side_length = 800
 
 canvas = tk.Canvas(window, width=side_length, height=side_length, bg = 'white')
 #canvas.pack()
@@ -54,7 +54,7 @@ a = dyn.a
 offset_y = side_length/2
 offset_x = side_length/2
 
-n_points = 50
+n_points = 100
 points = range(-n_points-2,0)
 trajectory = canvas.create_line(tuple(points),smooth=True, width=3, fill='green')
 
@@ -116,6 +116,14 @@ def moveVehicle(xx, uu, time_sec):
 
 
 def drawTraj(ss):
+
+    # Update the value of the offset such that the trajectory is centered in the canvas
+    # (otherwise it may happen that part of the trajectory is out of the screen)
+    mean_x = np.mean(ss[0,:])
+    mean_y = np.mean(ss[1,:])
+    global offset_x, offset_y
+    offset_x = side_length/2 + mean_x*scale
+    offset_y = side_length/2 + mean_y*scale
     
     # canvas.create_line((x1, y1, x2, y2, ..., xn, yn), smooth = True)
     # Let's create the (x1, y1, ...) vector

@@ -5,6 +5,7 @@ import gradient as grd
 import matplotlib.pyplot as plt
 import solver_ltv_LQR as ltv_LQR
 import numpy as np
+import plotter
 
 delta_t = dyn.dt
 TT = int(dyn.tf/delta_t)
@@ -120,8 +121,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
             descent[kk] += deltau[:,tt,kk].T@deltau[:,tt,kk]
             descent_arm[kk] += dJ[:,tt,kk].T@deltau[:,tt,kk]
 
-        #print(f'deltau: {deltau}')
-        #input(f'start {kk} iteration')
 
         ##################################
         # Stepsize selection - ARMIJO
@@ -224,8 +223,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
 
             plt.show()
 
-
-
         #xx_temp = np.zeros((n_x,TT))
         xx_temp = np.zeros((6,TT))
         uu_temp = np.zeros((n_u,TT))
@@ -241,54 +238,8 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
 
         # Plot intermediate trajectory
         if trajectory_plot and kk%10==0:
-            steps = np.arange(TT-1)
+            plotter.plot_opt_ref(xx_ref, uu_ref, xx[:,:,kk], uu[:,:,kk], TT)
 
-            steps = np.arange(TT-1)
-            plt.figure('Velocity')
-            plt.xlabel('steps')
-            plt.ylabel('V_opt')
-            plt.grid()
-            plt.plot(steps, xx[3,:TT-1,kk], color='red', label='V_opt')
-            plt.plot(steps, xx_ref[3,:TT-1], color='red',linestyle='dashed', label='V_ref')
-            plt.legend(loc="upper right")
-            plt.show()
-
-            plt.figure('Beta')
-            plt.xlabel('steps')
-            plt.ylabel('beta_opt')
-            plt.grid()
-            plt.plot(steps, xx[4,:TT-1,kk], color='green', label='beta_opt')
-            plt.plot(steps, xx_ref[4,:TT-1], color='green',linestyle='dashed', label='beta_ref')
-            plt.legend(loc="upper right")
-            plt.show()
-
-            plt.figure('Psi_dot')
-            plt.xlabel('steps')
-            plt.ylabel('psi_dot_opt')
-            plt.grid()
-            plt.plot(steps, xx[5,:TT-1,kk], color='blue', label='psi_dot_opt')
-            plt.plot(steps, xx_ref[5,:TT-1], color='blue',linestyle='dashed', label='psi_dot_ref')
-            plt.legend(loc="upper right")
-            plt.show()
-
-            plt.figure('delta')
-            plt.xlabel('steps')
-            plt.ylabel('delta_opt')
-            plt.grid()
-            plt.plot(steps, uu[0,:TT-1,kk], color='blue', label='delta_opt')
-            plt.plot(steps, uu_ref[0,:TT-1],color='blue',linestyle='dashed', label='delta_ref')
-            plt.legend(loc="upper right")
-            plt.show()
-
-
-            plt.figure('Fx')
-            plt.xlabel('steps')
-            plt.ylabel('Fx_opt')
-            plt.grid()
-            plt.plot(steps, uu[1,:TT-1,kk], color='red', label='Fx_opt')
-            plt.plot(steps, uu_ref[1,:TT-1],color='red',linestyle='dashed', label='Fx_ref')
-            plt.legend(loc="upper right")
-            plt.show()
 
         ############################
         # Termination condition
@@ -318,4 +269,4 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
     plt.grid()
     plt.show(block=False)
 
-    return xx, uu
+    return xx, uu, kk

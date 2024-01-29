@@ -11,6 +11,7 @@ import gradient_optcon_method as gom
 import newton_optcon_method as nom
 import LQR_tracking as LQR
 import time
+import plotter
 
 
 # Define step-size and time horizon for discretization
@@ -28,8 +29,7 @@ print("#########################################################################
 print("### EQUILIBRIA")
 
 # Equilibrium trajectories
-# Define a decision vector ww_eq = [beta_eq, delta_eq, Fx_eq]
-# ww_eq = np.zeros(3)
+# Define two decision vector ww_eq = [beta_eq, delta_eq, Fx_eq] with random values
 ww_eq1 = [0.1, 0.05, 50]
 ww_eq2 = [0.1, 0.05, 50]
 
@@ -41,25 +41,38 @@ WW1 = VV1/RR1
 
 # First equilibrium
 print("Computing equilibria 1 [V1 = {}, R1 = {}]".format(VV1,RR1))
+print("Initial arbitrary ww_eq [beta, delta, Fx] = {}".format(ww_eq1))
+print("Running Newton's method for root finding ...")
+
 ww_eq1 = equilibrium_finder.eq_finder(WW1, VV1, ww_eq1)
 
+print("Final ww_eq [beta, delta, Fx] = {}".format(ww_eq1))
+delta_x = dyn.dynamics([0,0,0,VV1,ww_eq1[0],WW1],[ww_eq1[1],ww_eq1[2]])[1]
+print("Check dynamics ([0,0,0] ideal): {}".format(delta_x[3:]))
 
-RR2 = 16
+RR2 = -16
 VV2 = 13
-#psi_dot = w = v/r
 WW2 = VV2/RR2
 
 # Second equilibrium
 print("###############################################################################################")
 print("Computing equilibria 2 [V2 = {}, R2 = {}]".format(VV2,RR2))
+print("Initial arbitrary ww_eq [beta, delta, Fx] = {}".format(ww_eq2))
+print("Running Newton's method for root finding ...")
+
 ww_eq2 = equilibrium_finder.eq_finder(WW2, VV2, ww_eq2)
 
+print("Final ww_eq [beta, delta, Fx] = {}".format(ww_eq2))
+delta_x = dyn.dynamics([0,0,0,VV2,ww_eq2[0],WW2],[ww_eq2[1],ww_eq2[2]])[1]
+print("Check dynamics ([0,0,0] ideal): {}".format(delta_x[3:]))
 
 
 ##################################################################
 ##################################################################
 ### UNFEASIBLE TRAJECTORY BETWEEN EQUILIBRIA (STEP)
 
+# Initially compute a step reference.
+# If smooth_reference, overwrite the values in the middle with a smooth transient
 smooth_reference = True
 
 xx_ref = np.zeros((n_x, TT))
@@ -89,7 +102,6 @@ for kk in range(int(TT/2), TT-1):
 
 if smooth_reference:
     ### UNFEASIBLE TRAJECTORY BETWEEN EQUILIBRIA (SMOOTH)
-
     V_transient = TT/10
     delta_V = VV2-VV1
     V_slope = delta_V/V_transient
@@ -124,33 +136,9 @@ if smooth_reference:
 
     for kk in range(int(TT/2-Fx_transient/2), int(TT/2+Fx_transient/2)):
         uu_ref[1,kk] = ww_eq1[2] + Fx_slope*(kk-(TT/2-Fx_transient/2))
-    
 
-
-steps = np.arange(TT-1)
-plt.figure('Velocity')
-plt.xlabel('steps')
-plt.ylabel('V_ref')
-plt.grid()
-plt.plot(steps, xx_ref[3,:TT-1], color='red', label='V_ref')
-plt.legend(loc="upper right")
-plt.show()
-
-plt.figure('Beta')
-plt.xlabel('steps')
-plt.ylabel('beta_ref')
-plt.grid()
-plt.plot(steps, xx_ref[4,:TT-1], color='green', label='beta_ref')
-plt.legend(loc="upper right")
-plt.show()
-
-plt.figure('Psi_dot')
-plt.xlabel('steps')
-plt.ylabel('psi_dot_ref')
-plt.grid()
-plt.plot(steps, xx_ref[5,:TT-1], color='blue', label='psi_dot_ref')
-plt.legend(loc="upper right")
-plt.show()
+# Plot the reference values
+plotter.plot_ref(xx_ref, uu_ref, TT)
 
 ##################################################################
 ##################################################################
@@ -171,11 +159,12 @@ for kk in range(int(TT-1)): uu_init[:,kk] = [ww_eq1[1], ww_eq1[2]]
 for kk in range(int(TT-1)): xx_init[:,kk+1] = xx_init[:,0]
 
 # Define a smooth initial guess
-# Does it work fine even if the inital guess is not a trajectory?? No
+# Does it work fine even if the inital guess is not a trajectory?? ->No
 
 # Compute a set of equilibrium between the inital and final equilibrium
 # Fix the evolution of V and psi_dot as linear from VV1,WW1 to VV2,WW2
 # Compute beta, delta and Fx such that each point is an equilibrium
+print('computing quasi-static trajectory... (takes 90 seconds)')
 
 transient = TT/5
 delta_V = VV2-VV1
@@ -212,120 +201,30 @@ for kk in range(int(TT/2+transient/2), TT-1):
     quasi_static_uu[0,kk] = ww_eq2[1]
     quasi_static_uu[1,kk] = ww_eq2[2]
 
+# The offset has a meaning only in task 3, so now we set it to zero
 offset = [0, 0, 0, 0, 0, 0]
 xx_init, uu_init = LQR.LQR_trajectory(quasi_static_xx, quasi_static_uu, offset)
 
-#xx, uu = gom.optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init)
-xx_opt, uu_opt = nom.optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init)
+#plotter.plot_init_guess(xx_init, uu_init, TT)
 
+#xx_opt, uu_opt = gom.optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init)
+xx_opt, uu_opt, last_iter = nom.optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init)
 
-# the comparison between the reference trajectory and the optimal trajectory
-#########################################
-# State evolution
-steps = np.arange(TT-1)
-plt.figure('Velocity')
-plt.xlabel('steps')
-plt.ylabel('V_opt')
-plt.grid()
-plt.plot(steps, xx_ref[3,:TT-1], color='red',label='V_ref',linestyle='dashed')
-plt.plot(steps, xx_opt[3,:TT-1,-1], color='red',label='V_opt')
-plt.legend(loc="upper right")
-plt.show()
+# Plot the comparison between the reference trajectory and the optimal trajectory
+plotter.plot_opt_ref(xx_ref, uu_ref, xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], TT)
 
-plt.figure('Beta')
-plt.xlabel('steps')
-plt.ylabel('beta_opt')
-plt.grid()
-plt.plot(steps, xx_ref[4,:TT-1], color='green',label='beta_ref',linestyle='dashed')
-plt.plot(steps, xx_opt[4,:TT-1,-1], color='green',label='beta_opt')
-plt.legend(loc="upper right")
-plt.show()
-
-plt.figure('Psi_dot')
-plt.xlabel('steps')
-plt.ylabel('psi_dot_opt')
-plt.grid()
-plt.plot(steps, xx_ref[5,:TT-1], color='blue',label='psi_dot_ref',linestyle='dashed')
-plt.plot(steps, xx_opt[5,:TT-1,-1], color='blue',label='psi_dot_opt')
-plt.legend(loc="upper right")
-plt.show()
-
-#########################################
-# Input evolution
-
-plt.figure('delta')
-plt.xlabel('steps')
-plt.ylabel('delta_opt')
-plt.grid()
-plt.plot(steps, uu_ref[0,:TT-1], color='red',linestyle='dashed',label='delta_ref')
-plt.plot(steps, uu_opt[0,:TT-1,-1], color='red',label='delta_opt')
-plt.legend(loc="upper right")
-plt.show()
-
-plt.figure('F_x_opt')
-plt.xlabel('steps')
-plt.ylabel('F_x')
-plt.grid()
-plt.plot(steps, uu_ref[1,:TT-1], color='blue',linestyle='dashed',label='F_x_ref')
-plt.plot(steps, uu_opt[1,:TT-1,-1], color='blue',label='F_x_opt')
-plt.legend(loc="upper right")
-plt.show()
 
 ##################################################################
 ##################################################################
 ### TRAJECTORY TRACKING VIA LQR (TASK 3)
 
+# Now the offset has a meaning. The feedback input is able to compensate initial offset.
 offset = [0, 0, 0, 0.2, 0, 0]
-xx_LQR, uu_LQR = LQR.LQR_trajectory(xx_opt[:,:,-1], uu_opt[:,:,-1],offset)
+xx_LQR, uu_LQR = LQR.LQR_trajectory(xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], offset)
 
-steps = np.arange(TT-1)
-plt.figure('Velocity')
-plt.xlabel('steps')
-plt.ylabel('V_LQR')
-plt.grid()
-plt.plot(steps, xx_opt[3,:TT-1,-1], color='red',label='V_opt',linestyle='dashed')
-plt.plot(steps, xx_LQR[3,:TT-1], color='red',label='V_LQR')
-plt.legend(loc="upper right")
-plt.show()
+# Plot the comparison between optimal trajectory and LQR feedback trajectory (with initial offset)
+plotter.plot_LQR_opt(xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], xx_LQR, uu_LQR, TT)
 
-plt.figure('Beta')
-plt.xlabel('steps')
-plt.ylabel('beta_LQR')
-plt.grid()
-plt.plot(steps, xx_opt[4,:TT-1,-1], color='green',label='beta_opt',linestyle='dashed')
-plt.plot(steps, xx_LQR[4,:TT-1], color='green',label='beta_LQR')
-plt.legend(loc="upper right")
-plt.show()
-
-plt.figure('Psi_dot')
-plt.xlabel('steps')
-plt.ylabel('psi_dot_LQR')
-plt.grid()
-plt.plot(steps, xx_opt[5,:TT-1,-1], color='blue',label='psi_dot_opt',linestyle='dashed')
-plt.plot(steps, xx_LQR[5,:TT-1], color='blue',label='psi_dot_LQR')
-plt.legend(loc="upper right")
-plt.show()
-
-#########################################
-# Input evolution
-
-plt.figure('delta')
-plt.xlabel('steps')
-plt.ylabel('delta_LQR')
-plt.grid()
-plt.plot(steps, uu_opt[0,:TT-1,-1], color='red',linestyle='dashed',label='delta_opt')
-plt.plot(steps, uu_LQR[0,:TT-1], color='red',label='delta_LQR')
-plt.legend(loc="upper right")
-plt.show()
-
-plt.figure('F_x')
-plt.xlabel('steps')
-plt.ylabel('F_x_LQR')
-plt.grid()
-plt.plot(steps, uu_opt[1,:TT-1,-1], color='blue',linestyle='dashed',label='F_x_opt')
-plt.plot(steps, uu_LQR[1,:TT-1], color='blue',label='F_x_LQR')
-plt.legend(loc="upper right")
-plt.show()
 
 ##################################################################
 ##################################################################
@@ -334,16 +233,16 @@ import animation as anim
 
 start_animation = input('press a button to start animation: ')
 
-anim.drawTraj(xx_opt[:,:,-1])
+anim.drawTraj(xx_opt[:,:,last_iter])
 kk = 0
-start_time = time.time()
+#start_time = time.time()
 while kk < TT-1:
-    anim.moveVehicle(xx_opt[:,kk,-1],uu_opt[:,kk,-1], delta_t*kk)
+    anim.moveVehicle(xx_opt[:,kk,last_iter],uu_opt[:,kk,last_iter], delta_t*kk)
     anim.window.update()
     kk += 1
-
+    # spleep is useful to slow down tha animation.
+    # (without the sleep the animation ends in 2 seconds)
     time.sleep(0.005)
 
 # Avoid animation to close automatically
-
 anim.window.mainloop()
