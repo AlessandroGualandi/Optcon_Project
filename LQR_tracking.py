@@ -35,12 +35,6 @@ def LQR_trajectory(xx_opt, uu_opt, offset):
         QQtr[:,:,tt] = cst.stagecost(xx_opt[3:,tt], uu_opt[:,tt], np.zeros(n_x), np.zeros(n_u))[3]
         RRtr[:,:,tt] = cst.stagecost(xx_opt[3:,tt], uu_opt[:,tt], np.zeros(n_x), np.zeros(n_u))[4]
         SStr[:,:,tt] = cst.stagecost(xx_opt[3:,tt], uu_opt[:,tt], np.zeros(n_x), np.zeros(n_u))[5]
-        
-        '''
-        QQtr[:,:,tt] = cst.stagecost(xx_opt[3:,tt], uu_opt[:,tt], xx_ref[3:,tt], uu_ref[:,tt])[3]
-        RRtr[:,:,tt] = cst.stagecost(xx_opt[3:,tt], uu_opt[:,tt], xx_ref[3:,tt], uu_ref[:,tt])[4]
-        SStr[:,:,tt] = cst.stagecost(xx_opt[3:,tt], uu_opt[:,tt], xx_ref[3:,tt], uu_ref[:,tt])[5]
-        '''
 
     KK = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, x0[3:], TT)[0]
 

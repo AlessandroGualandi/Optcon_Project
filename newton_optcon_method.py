@@ -25,14 +25,12 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
     armijo_maxiters = 20
     term_cond = 1e-6
 
-    #max_iters = int(1e2)
     max_iters = int(100)
     stepsize_0 = 1
 
     x0 = xx_ref[:,0]
 
     # Arrays to store data
-    #xx = np.zeros((n_x, TT, max_iters))
     xx = np.zeros((6, TT, max_iters))
     uu = np.zeros((n_u, TT, max_iters))
 
@@ -47,7 +45,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
 
     # Computing feasible trajectory
     kk = 0
-    #xx[:,:,0] = xx_init
     xx[:,:,0] = xx_init
     uu[:,:,0] = uu_init
 
@@ -66,7 +63,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
         # Descent direction calculation
         ##################################
 
-        # lambda is useless if we consider the regularized matrices!
         lmbd_temp = cst.termcost(xx[3:,TT-1,kk], xx_ref[3:,TT-1])[1]
         lmbd[:,TT-1,kk] = lmbd_temp.squeeze()
 
@@ -89,24 +85,14 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
             AA[:,:,tt] = fx.T
             BB[:,:,tt] = fu.T
 
-            #print(f'AA shape: {AA[:,:,tt].shape}')
-            #print(f'lmbd shape: {lmbd[:,tt+1,kk].shape}')
-            #print(f'qq shape: {at.shape}')
-
             lmbd_temp = AA[:,:,tt].T@lmbd[:,tt+1,kk][:,None] + at
             dJ_temp = BB[:,:,tt].T@lmbd[:,tt+1,kk][:,None] + bt
-            #deltau_temp = - dJ_temp
 
-            #print(f'lmbd_temp shape: {lmbd_temp.shape}')
             lmbd[:,tt,kk] = lmbd_temp.squeeze()
             dJ[:,tt,kk] = dJ_temp.squeeze()
-            #deltau[:,tt,kk] = deltau_temp.squeeze()
 
             qq[:,tt] = at.squeeze()
             rr[:,tt] = bt.squeeze()
-      
-            #lmbd_temp = At.T@lmbd[:,tt+1,kk][:,None] + at
-            #lmbd[:,tt,kk] = lmbd_temp.squeeze()
 
             QQtr[:,:,tt] = cst.stagecost(xx[3:,tt, kk], uu[:,tt,kk], xx_ref[3:,tt], uu_ref[:,tt])[3]
             RRtr[:,:,tt] = cst.stagecost(xx[3:,tt, kk], uu[:,tt,kk], xx_ref[3:,tt], uu_ref[:,tt])[4]
@@ -114,7 +100,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
 
 
         delta_x0 = np.zeros(n_x)
-        #KK, sigma, delta_x, deltau[:,:,kk] = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, delta_x0, TT, qq, rr, qqT)
         deltau[:,:,kk] = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, delta_x0, TT, qq, rr, qqT)[3]
 
         for tt in range(TT-1):
@@ -134,8 +119,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
         for ii in range(armijo_maxiters):
 
             # temp solution update
-
-            #xx_temp = np.zeros((n_x,TT))
             xx_temp = np.zeros((6,TT))
             uu_temp = np.zeros((n_u,TT))
 
@@ -149,7 +132,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
             JJ_temp = 0
 
             for tt in range(TT-1):
-                #temp_cost = cst.stagecost(xx_temp[:,tt], uu_temp[:,tt], xx_ref[:,tt], uu_ref[:,tt])[0]
                 temp_cost = cst.stagecost(xx_temp[3:,tt], uu_temp[:,tt], xx_ref[3:,tt], uu_ref[:,tt])[0]
                 JJ_temp += temp_cost
 
@@ -159,7 +141,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
 
             stepsizes.append(stepsize)
             costs_armijo.append(np.min([JJ_temp, 100*JJ[kk]]))
-            #costs_armijo.append(JJ_temp)
 
             if JJ_temp > JJ[kk]  + cc*stepsize*descent_arm[kk]:
                 # update the stepsize
@@ -179,8 +160,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
                 step = steps[ii]
 
                 # temp solution update
-
-                #xx_temp = np.zeros((n_x,TT))
                 xx_temp = np.zeros((6,TT))
                 uu_temp = np.zeros((n_u,TT))
 
@@ -194,16 +173,13 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
                 JJ_temp = 0
 
                 for tt in range(TT-1):
-                    #temp_cost = cst.stagecost(xx_temp[:,tt], uu_temp[:,tt], xx_ref[:,tt], uu_ref[:,tt])[0]
                     temp_cost = cst.stagecost(xx_temp[3:,tt], uu_temp[:,tt], xx_ref[3:,tt], uu_ref[:,tt])[0]
                     JJ_temp += temp_cost
 
-                #temp_cost = cst.termcost(xx_temp[:,-1], xx_ref[:,-1])[0]
                 temp_cost = cst.termcost(xx_temp[3:,-1], xx_ref[3:,-1])[0]
                 JJ_temp += temp_cost
 
                 costs[ii] = np.min([JJ_temp, 100*JJ[kk]])
-                #costs[ii] = JJ_temp
 
 
             plt.figure(1)

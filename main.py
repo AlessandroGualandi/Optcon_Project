@@ -138,6 +138,9 @@ if smooth_reference:
         uu_ref[1,kk] = ww_eq1[2] + Fx_slope*(kk-(TT/2-Fx_transient/2))
 
 # Plot the reference values
+print("###############################################################################################")
+print(f'smooth reference: {smooth_reference}')
+print('Plotting reference...')
 plotter.plot_ref(xx_ref, uu_ref, TT)
 
 ##################################################################
@@ -207,10 +210,13 @@ xx_init, uu_init = LQR.LQR_trajectory(quasi_static_xx, quasi_static_uu, offset)
 
 #plotter.plot_init_guess(xx_init, uu_init, TT)
 
+print("###############################################################################################")
 #xx_opt, uu_opt = gom.optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init)
+print('Running newton method for optimal control...')
 xx_opt, uu_opt, last_iter = nom.optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init)
 
 # Plot the comparison between the reference trajectory and the optimal trajectory
+print('Plotting optimal trajectory...')
 plotter.plot_opt_ref(xx_ref, uu_ref, xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], TT)
 
 
@@ -218,17 +224,29 @@ plotter.plot_opt_ref(xx_ref, uu_ref, xx_opt[:,:,last_iter], uu_opt[:,:,last_iter
 ##################################################################
 ### TRAJECTORY TRACKING VIA LQR (TASK 3)
 
+print("###############################################################################################")
+print("###############################################################################################")
+print("### OPTIMAL TRAJECTORY TRACKING")
+
 # Now the offset has a meaning. The feedback input is able to compensate initial offset.
 offset = [0, 0, 0, 0.2, 0, 0]
+print(f'Initial offset: {offset}')
+print('Applying LRQ...')
 xx_LQR, uu_LQR = LQR.LQR_trajectory(xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], offset)
 
 # Plot the comparison between optimal trajectory and LQR feedback trajectory (with initial offset)
+print('Plotting LQR result...')
 plotter.plot_LQR_opt(xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], xx_LQR, uu_LQR, TT)
 
 
 ##################################################################
 ##################################################################
 ### ANIMATION SECTION
+
+print("###############################################################################################")
+print("###############################################################################################")
+print("### ANIMATION")
+
 import animation as anim
 
 start_animation = input('press a button to start animation: ')
