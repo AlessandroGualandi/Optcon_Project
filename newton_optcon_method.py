@@ -27,6 +27,7 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
 
     max_iters = int(100)
     stepsize_0 = 1
+    #stepsize_0 = 2
 
     x0 = xx_ref[:,0]
 
@@ -100,12 +101,11 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
 
 
         delta_x0 = np.zeros(n_x)
-        deltau[:,:,kk] = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, delta_x0, TT, qq, rr, qqT)[3]
-
+        #deltau[:,:,kk] = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, delta_x0, TT, qq, rr, qqT)[3]
+        KK, sigma, deltau[:,:,kk] = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, delta_x0, TT, qq, rr, qqT)[:3]
         for tt in range(TT-1):
             descent[kk] += deltau[:,tt,kk].T@deltau[:,tt,kk]
             descent_arm[kk] += dJ[:,tt,kk].T@deltau[:,tt,kk]
-
 
         ##################################
         # Stepsize selection - ARMIJO
@@ -125,7 +125,9 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
             xx_temp[:,0] = x0
 
             for tt in range(TT-1):
+                # da fare in closed loop
                 uu_temp[:,tt] = uu[:,tt,kk] + stepsize*deltau[:,tt,kk]
+                #uu_temp[:,tt] = uu[:,tt,kk] + KK[:,:,tt]@(xx_temp[:,tt] - xx[:,tt,kk])[3:] + sigma[:,tt]*stepsize
                 xx_temp[:,tt+1] = dyn.dynamics(xx_temp[:,tt], uu_temp[:,tt])[0]
 
             # temp cost calculation
@@ -151,7 +153,7 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
                 break
 
 
-        if Armijo_plot and kk%10==0:
+        if Armijo_plot and kk%1==0:
             steps = np.linspace(0,stepsize_0,int(2e1))
             costs = np.zeros(len(steps))
 
@@ -166,7 +168,9 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
                 xx_temp[:,0] = x0
 
                 for tt in range(TT-1):
-                    uu_temp[:,tt] = uu[:,tt,kk] + step*deltau[:,tt,kk]
+                    # last newton method slide
+                    #uu_temp[:,tt] = uu[:,tt,kk] + step*deltau[:,tt,kk]
+                    uu_temp[:,tt] = uu[:,tt,kk] + KK[:,:,tt]@(xx_temp[:,tt] - xx[:,tt,kk])[3:] + sigma[:,tt]*stepsize
                     xx_temp[:,tt+1] = dyn.dynamics(xx_temp[:,tt], uu_temp[:,tt])[0]
 
                 # temp cost calculation
@@ -206,15 +210,16 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
         xx_temp[:,0] = x0
 
         for tt in range(TT-1):
-            uu_temp[:,tt] = uu[:,tt,kk] + stepsize*deltau[:,tt,kk]
+            #uu_temp[:,tt] = uu[:,tt,kk] + stepsize*deltau[:,tt,kk]
+            uu_temp[:,tt] = uu[:,tt,kk] + KK[:,:,tt]@(xx_temp[:,tt] - xx[:,tt,kk])[3:] + sigma[:,tt]*stepsize
             xx_temp[:,tt+1] = dyn.dynamics(xx_temp[:,tt], uu_temp[:,tt])[0]
 
         xx[:,:,kk+1] = xx_temp
         uu[:,:,kk+1] = uu_temp
 
         # Plot intermediate trajectory
-        if trajectory_plot and kk%10==0:
-            plotter.plot_opt_ref(xx_ref, uu_ref, xx[:,:,kk], uu[:,:,kk], TT)
+        if trajectory_plot and kk%1==0:
+            plotter.plot_opt_ref(xx_ref, uu_ref, xx[:,:,kk], uu[:,:,kk], TT, kk)
 
 
         ############################

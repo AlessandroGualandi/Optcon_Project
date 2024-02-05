@@ -141,7 +141,7 @@ if smooth_reference:
 print("###############################################################################################")
 print(f'smooth reference: {smooth_reference}')
 print('Plotting reference...')
-plotter.plot_ref(xx_ref, uu_ref, TT)
+#plotter.plot_ref(xx_ref, uu_ref, TT)
 
 ##################################################################
 ##################################################################
@@ -161,6 +161,7 @@ xx_init[:,0] = [0, -RR1, -ww_eq1[0], VV1, ww_eq1[0], WW1]
 for kk in range(int(TT-1)): uu_init[:,kk] = [ww_eq1[1], ww_eq1[2]]
 for kk in range(int(TT-1)): xx_init[:,kk+1] = xx_init[:,0]
 
+'''
 # Define a smooth initial guess
 # Does it work fine even if the inital guess is not a trajectory?? ->No
 
@@ -207,7 +208,7 @@ for kk in range(int(TT/2+transient/2), TT-1):
 # The offset has a meaning only in task 3, so now we set it to zero
 offset = [0, 0, 0, 0, 0, 0]
 xx_init, uu_init = LQR.LQR_trajectory(quasi_static_xx, quasi_static_uu, offset)
-
+'''
 #plotter.plot_init_guess(xx_init, uu_init, TT)
 
 print("###############################################################################################")
@@ -217,8 +218,8 @@ xx_opt, uu_opt, last_iter = nom.optimal_trajectory(xx_ref, uu_ref, xx_init, uu_i
 
 # Plot the comparison between the reference trajectory and the optimal trajectory
 print('Plotting optimal trajectory...')
-plotter.plot_opt_ref(xx_ref, uu_ref, xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], TT)
-
+plotter.plot_opt_ref(xx_ref, uu_ref, xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], TT, last_iter)
+plotter.plot_opt_iters(xx_ref, uu_ref, xx_opt, uu_opt, TT, last_iter)
 
 ##################################################################
 ##################################################################
@@ -229,14 +230,21 @@ print("#########################################################################
 print("### OPTIMAL TRAJECTORY TRACKING")
 
 # Now the offset has a meaning. The feedback input is able to compensate initial offset.
-offset = [0, 0, 0, 0.2, 0, 0]
-print(f'Initial offset: {offset}')
-print('Applying LRQ...')
-xx_LQR, uu_LQR = LQR.LQR_trajectory(xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], offset)
+offset = np.array([0, 0, 0, 0.2, 0.09, 0.09])
+alpha = [-1, 1, 2]
+xx_LQR = np.zeros((n_x,TT,len(alpha)))
+uu_LQR = np.zeros((n_u,TT,len(alpha)))
+
+for kk in range(len(alpha)):
+    temp_offset = offset*alpha[kk]
+    print(f'Initial offset: {temp_offset}')
+    print('Applying LRQ...')
+    xx_LQR[:,:,kk], uu_LQR[:,:,kk] = LQR.LQR_trajectory(xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], temp_offset)
 
 # Plot the comparison between optimal trajectory and LQR feedback trajectory (with initial offset)
 print('Plotting LQR result...')
-plotter.plot_LQR_opt(xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], xx_LQR, uu_LQR, TT)
+plotter.plot_LQR_opt(xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], xx_LQR, uu_LQR, TT, alpha)
+plotter.plot_LQR_error(xx_opt[:,:,last_iter], uu_opt[:,:,last_iter], xx_LQR, uu_LQR, TT, alpha)
 
 
 ##################################################################
