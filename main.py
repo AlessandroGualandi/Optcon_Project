@@ -50,7 +50,7 @@ print("Final ww_eq [beta, delta, Fx] = {}".format(ww_eq1))
 delta_x = dyn.dynamics([0,0,0,VV1,ww_eq1[0],WW1],[ww_eq1[1],ww_eq1[2]])[1]
 print("Check dynamics ([0,0,0] ideal): {}".format(delta_x[3:]))
 
-RR2 = -16
+RR2 = 16
 VV2 = 13
 WW2 = VV2/RR2
 

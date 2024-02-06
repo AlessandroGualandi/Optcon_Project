@@ -27,7 +27,7 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
 
     max_iters = int(100)
     stepsize_0 = 1
-    #stepsize_0 = 2
+    
 
     x0 = xx_ref[:,0]
 
@@ -101,8 +101,8 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
 
 
         delta_x0 = np.zeros(n_x)
-        #deltau[:,:,kk] = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, delta_x0, TT, qq, rr, qqT)[3]
-        KK, sigma, deltau[:,:,kk] = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, delta_x0, TT, qq, rr, qqT)[:3]
+        #deltau[:,:,kk] = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, delta_x0, TT, qq, rr, qqT)[2]
+        KK, sigma, deltau[:,:,kk] = ltv_LQR.ltv_LQR(AA, BB, QQtr, RRtr, SStr, QQT, delta_x0, TT, qq, rr, qqT)
         for tt in range(TT-1):
             descent[kk] += deltau[:,tt,kk].T@deltau[:,tt,kk]
             descent_arm[kk] += dJ[:,tt,kk].T@deltau[:,tt,kk]
@@ -117,7 +117,6 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
         stepsize = stepsize_0
 
         for ii in range(armijo_maxiters):
-
             # temp solution update
             xx_temp = np.zeros((6,TT))
             uu_temp = np.zeros((n_u,TT))
@@ -125,19 +124,15 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
             xx_temp[:,0] = x0
 
             for tt in range(TT-1):
-                # da fare in closed loop
                 uu_temp[:,tt] = uu[:,tt,kk] + stepsize*deltau[:,tt,kk]
                 #uu_temp[:,tt] = uu[:,tt,kk] + KK[:,:,tt]@(xx_temp[:,tt] - xx[:,tt,kk])[3:] + sigma[:,tt]*stepsize
                 xx_temp[:,tt+1] = dyn.dynamics(xx_temp[:,tt], uu_temp[:,tt])[0]
 
             # temp cost calculation
             JJ_temp = 0
-
             for tt in range(TT-1):
                 temp_cost = cst.stagecost(xx_temp[3:,tt], uu_temp[:,tt], xx_ref[3:,tt], uu_ref[:,tt])[0]
                 JJ_temp += temp_cost
-
-            #temp_cost = cst.termcost(xx_temp[:,-1], xx_ref[:,-1])[0]
             temp_cost = cst.termcost(xx_temp[3:,-1], xx_ref[3:,-1])[0]
             JJ_temp += temp_cost
 
@@ -147,20 +142,17 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
             if JJ_temp > JJ[kk]  + cc*stepsize*descent_arm[kk]:
                 # update the stepsize
                 stepsize = beta*stepsize
-
             else:
                 print('Armijo stepsize = {:.3e}'.format(stepsize))
                 break
 
 
-        if Armijo_plot and kk%1==0:
+        if Armijo_plot and kk%5==0:
             steps = np.linspace(0,stepsize_0,int(2e1))
             costs = np.zeros(len(steps))
 
             for ii in range(len(steps)):
-
                 step = steps[ii]
-
                 # temp solution update
                 xx_temp = np.zeros((6,TT))
                 uu_temp = np.zeros((n_u,TT))
@@ -168,9 +160,8 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
                 xx_temp[:,0] = x0
 
                 for tt in range(TT-1):
-                    # last newton method slide
-                    #uu_temp[:,tt] = uu[:,tt,kk] + step*deltau[:,tt,kk]
-                    uu_temp[:,tt] = uu[:,tt,kk] + KK[:,:,tt]@(xx_temp[:,tt] - xx[:,tt,kk])[3:] + sigma[:,tt]*stepsize
+                    uu_temp[:,tt] = uu[:,tt,kk] + step*deltau[:,tt,kk]
+                    #uu_temp[:,tt] = uu[:,tt,kk] + KK[:,:,tt]@(xx_temp[:,tt] - xx[:,tt,kk])[3:] + sigma[:,tt]*stepsize
                     xx_temp[:,tt+1] = dyn.dynamics(xx_temp[:,tt], uu_temp[:,tt])[0]
 
                 # temp cost calculation
@@ -218,7 +209,7 @@ def optimal_trajectory(xx_ref, uu_ref, xx_init, uu_init):
         uu[:,:,kk+1] = uu_temp
 
         # Plot intermediate trajectory
-        if trajectory_plot and kk%1==0:
+        if trajectory_plot and kk%5==0:
             plotter.plot_opt_ref(xx_ref, uu_ref, xx[:,:,kk], uu[:,:,kk], TT, kk)
 
 
